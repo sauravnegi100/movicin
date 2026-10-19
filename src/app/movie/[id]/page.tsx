@@ -8,8 +8,11 @@ import {
   isTmdbConfigured,
   mapTmdbDetailsToDomain,
 } from "@/lib/providers/tmdb";
-import { getBrandName, BRAND_CONFIG } from "@/config/brand";
+import { BRAND_CONFIG } from "@/config/brand";
 import { TmdbMissingKeyAlert } from "@/components/movies/TmdbMissingKeyAlert";
+import { MovieTrackingActions } from "@/components/movies/MovieTrackingActions";
+import { createClient } from "@/lib/supabase/server";
+import { getUserMovieTracking } from "@/server/tracking/actions";
 import {
   Star,
   Clock,
@@ -32,18 +35,17 @@ export async function generateMetadata({
 }: MovieDetailPageProps): Promise<Metadata> {
   const { id: rawId } = await params;
   const movieId = parseInt(rawId, 10);
-  const brandName = getBrandName();
 
   if (isNaN(movieId) || movieId <= 0 || !isTmdbConfigured()) {
     return {
-      title: `Movie Details | ${brandName}`,
+      title: "Movie Details",
     };
   }
 
   const response = await getMovieDetails(movieId);
   if (!response.data) {
     return {
-      title: `Movie Not Found | ${brandName}`,
+      title: "Movie Not Found",
     };
   }
 
@@ -51,7 +53,7 @@ export async function generateMetadata({
   const yearSuffix = movie.releaseYear ? ` (${movie.releaseYear})` : "";
 
   return {
-    title: `${movie.title}${yearSuffix} | ${brandName}`,
+    title: `${movie.title}${yearSuffix}`,
     description: movie.overview.slice(0, 160),
     openGraph: {
       title: `${movie.title}${yearSuffix}`,
@@ -69,7 +71,6 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
   await connection();
   const { id: rawId } = await params;
   const movieId = parseInt(rawId, 10);
-  const brandName = getBrandName();
 
   if (isNaN(movieId) || movieId <= 0) {
     notFound();
@@ -118,6 +119,13 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
   }
 
   const movie = mapTmdbDetailsToDomain(response.data);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isAuthenticated = Boolean(user);
+  const initialTracking = await getUserMovieTracking(movieId);
 
   return (
     <article className="relative min-h-screen">
@@ -186,12 +194,32 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
                   <span className="font-medium text-[#F8FAFC] text-right">{movie.director}</span>
                 </div>
               )}
+              {movie.writers.length > 0 && (
+                <div className="flex items-center justify-between text-[#9DA8B8]">
+                  <span>{movie.writers.length === 1 ? "Writer" : "Writers"}</span>
+                  <span className="font-medium text-[#F8FAFC] text-right">
+                    {movie.writers.join(", ")}
+                  </span>
+                </div>
+              )}
               {movie.spokenLanguages.length > 0 && (
                 <div className="flex items-center justify-between text-[#9DA8B8]">
                   <span>Languages</span>
                   <span className="font-medium text-[#F8FAFC] text-right">
                     {movie.spokenLanguages.slice(0, 2).join(", ")}
                   </span>
+                </div>
+              )}
+              {movie.budgetFormatted && (
+                <div className="flex items-center justify-between text-[#9DA8B8]">
+                  <span>Budget</span>
+                  <span className="font-medium text-[#F8FAFC]">{movie.budgetFormatted}</span>
+                </div>
+              )}
+              {movie.revenueFormatted && (
+                <div className="flex items-center justify-between text-[#9DA8B8]">
+                  <span>Box Office</span>
+                  <span className="font-medium text-[#F8FAFC]">{movie.revenueFormatted}</span>
                 </div>
               )}
               {movie.imdbUrl && (
@@ -290,11 +318,24 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
                     <span>Independent Scoring</span>
                   </div>
                   <p className="text-[11px] text-[#697487]">
-                    External provider rating. {brandName} community rating unlocks in the personal diary milestone.
+                    External provider rating. Your personal rating is kept completely separate and saved to your private viewing diary.
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Personal Viewing Diary & Tracking Actions */}
+            <MovieTrackingActions
+              movie={{
+                id: movie.id,
+                title: movie.title,
+                posterPath: movie.posterUrl,
+                releaseDate: movie.releaseDate,
+                voteAverage: movie.tmdbRating,
+              }}
+              initialTracking={initialTracking}
+              isAuthenticated={isAuthenticated}
+            />
 
             {/* Overview / Synopsis Section */}
             <div className="space-y-2">
@@ -304,14 +345,48 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
               </p>
             </div>
 
+            {/* Official Trailer Section */}
+            {movie.trailer && (
+              <div className="space-y-3 pt-4 border-t border-[#232838]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Film className="h-5 w-5 text-[#F43F5E]" aria-hidden="true" />
+                    <h2 className="font-sans text-lg font-bold text-[#F8FAFC]">
+                      Official Trailer
+                    </h2>
+                  </div>
+                  <a
+                    href={movie.trailer.youtubeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#9DA8B8] hover:text-[#F8FAFC] transition-colors"
+                  >
+                    <span>Watch on YouTube</span>
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                </div>
+
+                <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-[#232838] bg-[#12151F] shadow-xl">
+                  <iframe
+                    src={`https://www.youtube-nocookie.com/embed/${movie.trailer.key}`}
+                    title={`${movie.title} — ${movie.trailer.name}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    loading="lazy"
+                    className="h-full w-full border-0"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Top Cast Section */}
             {movie.topCast.length > 0 && (
               <div className="space-y-3 pt-4 border-t border-[#232838]">
                 <h2 className="font-sans text-lg font-bold text-[#F8FAFC]">Top Cast</h2>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {movie.topCast.map((actor) => (
+                  {movie.topCast.map((actor, idx) => (
                     <div
-                      key={actor.id}
+                      key={`${actor.id}-${idx}`}
                       className="flex items-center gap-3 rounded-xl border border-[#232838] bg-[#12151F] p-2.5"
                     >
                       <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#1A1E2B]">
@@ -334,7 +409,7 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
                           {actor.name}
                         </p>
                         <p className="text-[11px] text-[#697487] truncate">
-                          {actor.character}
+                          {actor.character || "Cast"}
                         </p>
                       </div>
                     </div>

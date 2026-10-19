@@ -3,13 +3,19 @@ import Link from "next/link";
 import { Film, Star } from "lucide-react";
 import { type MovieCardData } from "@/lib/providers/tmdb/types";
 import { formatRating } from "@/lib/providers/tmdb/utils";
+import { QuickWatchlistButton } from "@/components/movies/QuickWatchlistButton";
 
 interface MovieCardProps {
   movie: MovieCardData;
   priority?: boolean;
+  initialInWatchlist?: boolean;
 }
 
-export function MovieCard({ movie, priority = false }: MovieCardProps) {
+export function MovieCard({
+  movie,
+  priority = false,
+  initialInWatchlist = false,
+}: MovieCardProps) {
   const ratingText = formatRating(movie.tmdbRating);
   const hasRating = movie.tmdbRating > 0 && movie.tmdbVoteCount > 0;
 
@@ -41,6 +47,20 @@ export function MovieCard({ movie, priority = false }: MovieCardProps) {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#12151F] to-transparent opacity-80"
           aria-hidden="true"
         />
+
+        {/* Quick Watchlist Action */}
+        <div className="absolute top-2.5 left-2.5 z-20">
+          <QuickWatchlistButton
+            movie={{
+              tmdbId: movie.id,
+              title: movie.title,
+              posterPath: movie.posterUrl,
+              releaseDate: movie.releaseYear ? `${movie.releaseYear}-01-01` : null,
+              voteAverage: movie.tmdbRating,
+            }}
+            initialInWatchlist={initialInWatchlist}
+          />
+        </div>
 
         {/* TMDB External Score Pill */}
         {hasRating && (

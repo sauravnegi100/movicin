@@ -75,3 +75,53 @@ export const AVAILABLE_LANGUAGES: { code: string; label: string }[] = [
   { code: "de", label: "German" },
   { code: "it", label: "Italian" },
 ];
+
+/**
+ * Personal movie tracking types corresponding to supabase/migrations/20261020000001_movie_tracking.sql
+ */
+
+export interface WatchlistItem {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
+  vote_average: number | null;
+  created_at: string;
+}
+
+export interface WatchedMovie {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
+  vote_average: number | null;
+  watched_at: string;
+  created_at: string;
+  updated_at: string;
+  user_rating?: number | null; // optionally joined for diary presentation
+}
+
+export interface MovieRating {
+  id: string;
+  user_id: string;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string | null;
+  vote_average: number | null;
+  rating: number; // 0.5 to 10.0 scale
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserMovieTrackingState {
+  inWatchlist: boolean;
+  isWatched: boolean;
+  userRating: number | null;
+  watchedAt?: string | null;
+}
+

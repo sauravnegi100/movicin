@@ -45,14 +45,14 @@ export function SignupForm() {
           Check your email
         </h2>
         <p className="mt-2 text-sm text-[#9DA8B8]">
-          We have dispatched a verification link to{" "}
+          If an account does not already exist for{" "}
           <span className="font-semibold text-[#F8FAFC]">
             {state.email || "your email address"}
           </span>
-          .
+          , a verification link has been sent.
         </p>
         <p className="mt-2 text-xs text-[#697487]">
-          Please click the link in your email to confirm your account and begin your viewing diary.
+          Please check your inbox and spam folder. If you already have an account, you can sign in directly.
         </p>
         <div className="mt-6">
           <Link

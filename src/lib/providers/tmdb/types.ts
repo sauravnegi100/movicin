@@ -76,6 +76,22 @@ export interface TmdbMovieDetails {
     name: string;
   }>;
   credits?: TmdbCredits;
+  videos?: TmdbVideosResponse;
+}
+
+export interface TmdbVideo {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  size: number;
+  type: string;
+  official: boolean;
+  published_at?: string;
+}
+
+export interface TmdbVideosResponse {
+  results: TmdbVideo[];
 }
 
 export interface TmdbPaginatedResponse<T> {
@@ -120,9 +136,18 @@ export interface MovieDetailData {
   tmdbVoteCount: number;
   status: string;
   director: string | null;
+  writers: string[];
+  budgetFormatted: string | null;
+  revenueFormatted: string | null;
   topCast: Array<{ id: number; name: string; character: string; profileUrl: string | null }>;
   spokenLanguages: string[];
   imdbUrl: string | null;
+  trailer: {
+    key: string;
+    name: string;
+    site: string;
+    youtubeUrl: string;
+  } | null;
 }
 
 export interface DiscoverOptions {

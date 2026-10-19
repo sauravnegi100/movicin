@@ -246,7 +246,7 @@ export async function getMovieDetails(
   return tmdbFetch<TmdbMovieDetails>(
     `/movie/${id}`,
     {
-      append_to_response: "credits",
+      append_to_response: "credits,videos",
       language: "en-US",
     },
     86400 // 24 hours cache for historical details

@@ -70,6 +70,19 @@ export function formatVoteCount(count?: number | null): string {
 }
 
 /**
+ * Formats monetary amounts (e.g. budget, revenue) into USD currency string.
+ * Returns null if amount is missing, 0, or invalid.
+ */
+export function formatCurrency(amount?: number | null): string | null {
+  if (!amount || amount <= 0 || isNaN(amount)) return null;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+/**
  * Converts a TMDB API movie list item into Movicin's normalized MovieCardData.
  */
 export function mapTmdbMovieToCard(item: TmdbMovieListItem): MovieCardData {
@@ -95,6 +108,13 @@ export function mapTmdbDetailsToDomain(item: TmdbMovieDetails): MovieDetailData 
     (c) => c.job?.toLowerCase() === "director"
   );
 
+  // Extract writers / screenplay from crew
+  const writerJobs = ["screenplay", "writer", "author", "novel", "story"];
+  const writerCrew = (item.credits?.crew || [])
+    .filter((c) => writerJobs.includes(c.job?.toLowerCase()))
+    .map((c) => c.name);
+  const writers = Array.from(new Set(writerCrew)).slice(0, 3);
+
   // Top 8 cast members with photos
   const topCast = (item.credits?.cast || []).slice(0, 8).map((actor) => ({
     id: actor.id,
@@ -106,6 +126,38 @@ export function mapTmdbDetailsToDomain(item: TmdbMovieDetails): MovieDetailData 
   const spokenLanguages = (item.spoken_languages || []).map(
     (l) => l.english_name || l.name
   );
+
+  // Extract official YouTube trailer
+  const videos = item.videos?.results || [];
+  const officialTrailer =
+    videos.find(
+      (v) =>
+        v.site?.toLowerCase() === "youtube" &&
+        v.type?.toLowerCase() === "trailer" &&
+        v.official &&
+        Boolean(v.key)
+    ) ||
+    videos.find(
+      (v) =>
+        v.site?.toLowerCase() === "youtube" &&
+        v.type?.toLowerCase() === "trailer" &&
+        Boolean(v.key)
+    ) ||
+    videos.find(
+      (v) =>
+        v.site?.toLowerCase() === "youtube" &&
+        (v.type?.toLowerCase() === "teaser" || v.type?.toLowerCase() === "clip") &&
+        Boolean(v.key)
+    );
+
+  const trailer = officialTrailer
+    ? {
+        key: officialTrailer.key,
+        name: officialTrailer.name || "Official Trailer",
+        site: officialTrailer.site,
+        youtubeUrl: `https://www.youtube.com/watch?v=${officialTrailer.key}`,
+      }
+    : null;
 
   return {
     id: item.id,
@@ -124,8 +176,12 @@ export function mapTmdbDetailsToDomain(item: TmdbMovieDetails): MovieDetailData 
     tmdbVoteCount: item.vote_count || 0,
     status: item.status || "Released",
     director: directorCrew ? directorCrew.name : null,
+    writers,
+    budgetFormatted: formatCurrency(item.budget),
+    revenueFormatted: formatCurrency(item.revenue),
     topCast,
     spokenLanguages,
     imdbUrl: item.imdb_id ? `https://www.imdb.com/title/${item.imdb_id}` : null,
+    trailer,
   };
 }

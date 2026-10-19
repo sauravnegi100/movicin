@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getBrandName } from "@/config/brand";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
+import { getUserTrackingCounts } from "@/server/tracking/actions";
 import type { Profile, UserPreferences } from "@/types/database";
 import {
   User,
@@ -60,6 +62,9 @@ export default async function ProfilePage() {
     .is("revoked_at", null);
 
   const activeRoles: string[] = rolesData?.map((r) => r.role) || ["member"];
+
+  // 5. Fetch live personal tracking stats
+  const trackingCounts = await getUserTrackingCounts();
 
   // 5. Provide resilient fallbacks if profile or preferences are still syncing
   const profile: Profile = profileData || {
@@ -191,38 +196,76 @@ export default async function ProfilePage() {
         </form>
       </div>
 
-      {/* 2. Personal Viewing Stats Summary (Phase 4 Foundation) */}
+      {/* 2. Personal Viewing Stats Summary */}
       <div className="mt-8">
-        <h2 className="font-sans text-lg font-semibold text-[#F8FAFC]">
-          Personal Viewing Stats
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-sans text-lg font-semibold text-[#F8FAFC]">
+            Personal Viewing Stats
+          </h2>
+          <div className="flex items-center gap-3 text-xs">
+            <Link
+              href="/me/diary"
+              className="text-[#F43F5E] hover:underline font-medium"
+            >
+              Open Diary &rarr;
+            </Link>
+            <span className="text-[#384157]">•</span>
+            <Link
+              href="/me/watchlist"
+              className="text-[#06B6D4] hover:underline font-medium"
+            >
+              Open Watchlist &rarr;
+            </Link>
+          </div>
+        </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-[#232838] bg-[#12151F] p-5">
+          <Link
+            href="/me/diary"
+            className="group rounded-2xl border border-[#232838] bg-[#12151F] p-5 transition-all hover:border-[#F43F5E]/50 hover:bg-[#1A1E2B]/50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F43F5E]"
+          >
             <div className="flex items-center justify-between text-[#9DA8B8]">
-              <span className="text-xs uppercase tracking-wider">Watched</span>
+              <span className="text-xs uppercase tracking-wider group-hover:text-[#F43F5E] transition-colors">
+                Watched
+              </span>
               <BookOpen className="h-4 w-4 text-[#F43F5E]" aria-hidden="true" />
             </div>
-            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">0</p>
-            <p className="mt-1 text-xs text-[#697487]">Films & series logged</p>
-          </div>
+            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">
+              {trackingCounts.watchedCount}
+            </p>
+            <p className="mt-1 text-xs text-[#697487]">Films & series logged in diary</p>
+          </Link>
 
-          <div className="rounded-2xl border border-[#232838] bg-[#12151F] p-5">
+          <Link
+            href="/me/diary"
+            className="group rounded-2xl border border-[#232838] bg-[#12151F] p-5 transition-all hover:border-[#FBBF24]/50 hover:bg-[#1A1E2B]/50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FBBF24]"
+          >
             <div className="flex items-center justify-between text-[#9DA8B8]">
-              <span className="text-xs uppercase tracking-wider">Ratings</span>
+              <span className="text-xs uppercase tracking-wider group-hover:text-[#FBBF24] transition-colors">
+                Ratings
+              </span>
               <Star className="h-4 w-4 text-[#FBBF24]" aria-hidden="true" />
             </div>
-            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">0</p>
-            <p className="mt-1 text-xs text-[#697487]">Community scores submitted</p>
-          </div>
+            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">
+              {trackingCounts.ratingsCount}
+            </p>
+            <p className="mt-1 text-xs text-[#697487]">Personal scores submitted</p>
+          </Link>
 
-          <div className="rounded-2xl border border-[#232838] bg-[#12151F] p-5">
+          <Link
+            href="/me/watchlist"
+            className="group rounded-2xl border border-[#232838] bg-[#12151F] p-5 transition-all hover:border-[#06B6D4]/50 hover:bg-[#1A1E2B]/50 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#06B6D4]"
+          >
             <div className="flex items-center justify-between text-[#9DA8B8]">
-              <span className="text-xs uppercase tracking-wider">Watchlist</span>
+              <span className="text-xs uppercase tracking-wider group-hover:text-[#06B6D4] transition-colors">
+                Watchlist
+              </span>
               <Bookmark className="h-4 w-4 text-[#06B6D4]" aria-hidden="true" />
             </div>
-            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">0</p>
+            <p className="mt-3 text-2xl font-bold text-[#F8FAFC]">
+              {trackingCounts.watchlistCount}
+            </p>
             <p className="mt-1 text-xs text-[#697487]">Titles queued for viewing</p>
-          </div>
+          </Link>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { validateEmail, validatePassword } from "@/lib/auth/validation";
@@ -93,32 +93,41 @@ export async function signupAction(
     process.env.NEXT_PUBLIC_APP_URL ||
     "http://localhost:3000";
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(
-        getSafeRedirectUrl(next, "/me")
-      )}`,
-    },
-  });
-
-  if (error) {
-    return { error: error.message || "Registration failed. Please try again." };
-  }
-
-  // Check if confirmation email was required
-  // If session is null or identities array is empty, confirmation is required
-  const session = data?.session;
-  if (!session) {
-    return {
-      success: true,
-      requiresEmailConfirmation: true,
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signUp({
       email,
-    };
-  }
+      password,
+      options: {
+        emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(
+          getSafeRedirectUrl(next, "/me")
+        )}`,
+      },
+    });
 
-  // If Supabase is configured to auto-confirm, redirect directly
-  redirect(getSafeRedirectUrl(next, "/me"));
+    if (error) {
+      return { error: error.message || "Registration failed. Please try again." };
+    }
+
+    if (!data?.user) {
+      return { error: "Registration failed. Please try again." };
+    }
+
+    // Check if confirmation email was required
+    // If session is null or identities array is empty, confirmation is required
+    const session = data?.session;
+    if (!session) {
+      return {
+        success: true,
+        requiresEmailConfirmation: true,
+        email,
+      };
+    }
+
+    // If Supabase is configured to auto-confirm, redirect directly
+    redirect(getSafeRedirectUrl(next, "/me"));
+  } catch (err) {
+    unstable_rethrow(err);
+    return { error: "An unexpected error occurred during registration. Please try again." };
+  }
 }
