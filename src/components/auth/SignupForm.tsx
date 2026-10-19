@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signupAction, type AuthState } from "@/server/auth/actions";
 import { validatePassword } from "@/lib/auth/validation";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 import {
   Eye,
   EyeOff,
@@ -17,7 +18,7 @@ import {
 
 export function SignupForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/me";
+  const next = getSafeRedirectUrl(searchParams.get("next"), "/me");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

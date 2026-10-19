@@ -4,11 +4,12 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { loginAction, type AuthState } from "@/server/auth/actions";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/me";
+  const next = getSafeRedirectUrl(searchParams.get("next"), "/me");
   const callbackError = searchParams.get("error");
 
   const [showPassword, setShowPassword] = useState(false);

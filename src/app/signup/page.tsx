@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { getBrandName } from "@/config/brand";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 import { Film } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -26,7 +27,8 @@ export default async function SignupPage({
   // If already authenticated, redirect to destination
   if (user) {
     const params = await searchParams;
-    redirect(params.next || "/me");
+    const destination = getSafeRedirectUrl(params.next, "/me");
+    redirect(destination === "/login" || destination === "/signup" ? "/me" : destination);
   }
 
   const brandName = getBrandName();
